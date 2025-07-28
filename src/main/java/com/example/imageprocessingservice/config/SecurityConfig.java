@@ -1,8 +1,11 @@
 package com.example.imageprocessingservice.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -19,15 +22,33 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 @EnableWebSecurity
 class SecurityConfig {
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers(toH2Console()).hasAuthority("ADMIN")
-                        .requestMatchers("/register").permitAll()
+    @Order(1)
+    //TODO
+    // First just plain HTTP login and registration
+    // Later, add OAuth2 and JWT support
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/**")
+                .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints. // Not recommended for production
+                .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers("/api/login").permitAll()
                         .anyRequest().authenticated())
-                .formLogin(
-                        form -> form
-                                .loginPage("/login")
-                                .permitAll()
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //What happens here?
+                .httpBasic(Customizer.withDefaults()); // Use HTTP Basic authentication for API; Here I can use JWT later
+        return http.build();
+    }
+
+    @Bean
+    @Order(2) // what this means?
+    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/**")
+                .authorizeHttpRequests(auth -> auth
+                .requestMatchers(toH2Console()).permitAll() // Allow access to H2 console)
+                        .requestMatchers("/login", "/register").permitAll() // Allow access to login and register pages
+                        .anyRequest().authenticated())
+                .formLogin(form -> form
+                        .loginPage("/login") // Custom login page)
+                        .permitAll()
                 );
         return http.build();
     }
