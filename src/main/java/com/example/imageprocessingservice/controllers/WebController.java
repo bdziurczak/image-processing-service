@@ -7,13 +7,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@RequestMapping("/web")
+@RequestMapping("web")
 class WebController {
     private final UserService userService;
     WebController(UserService userService) {
@@ -26,31 +29,33 @@ class WebController {
         try {
             String username = authentication.getName();
             model.addAttribute("username", username);
-            return "/web/index";
+            return "web/index";
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @GetMapping("/login")
+    @GetMapping("login")
     String login() {
-        return "/web/login";
+        return "web/login";
     }
 
-    @GetMapping("/register")
+    @GetMapping("register")
     String register() {
-        return "/web/register";
+        return "web/register";
     }
 
-    @PostMapping("/register")
-    ResponseEntity<String> registerUser(@RequestParam(name = "username") String username,
-                        @RequestParam(name = "password") String password) {
+    @PostMapping("register")
+    ModelAndView registerUser(@RequestParam(name = "username") String username,
+                              @RequestParam(name = "password") String password,
+                              RedirectAttributes redirectAttributes) {
         System.out.println(username + " " + password + " registered successfully!");
 
         if (userService.registerUser(username, password)) {
-            return ResponseEntity.ok("Registration successful!");
+            redirectAttributes.addFlashAttribute("message", "Registration successful!");
         } else {
-            return new ResponseEntity<>("Registration failed.", HttpStatus.BAD_REQUEST);
+            redirectAttributes.addFlashAttribute("message", "Registration failed. Username may already exist.");
         }
+        return new ModelAndView("redirect:/web/login");
     }
 }

@@ -9,6 +9,9 @@
     Invalid username and password.</div>
 <div th:if="${param.logout}">
     You have been logged out.</div>
+<div >
+    <h3 th:if="${message != null}" th:text="${message}"></h3>
+</div>
 <form th:action="@{/web/login}" method="post">
     <div>
         <input type="text" name="username" placeholder="Username"/>
