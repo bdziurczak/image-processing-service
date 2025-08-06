@@ -37,7 +37,7 @@ class ApiRestController {
     @PostMapping("/register")
     String register(@RequestBody Account account) {
         return userService.registerUser(account.username(), account.password())
-                ? "Registration successful!"
+                ? "API: Registration successful!"
                 : "Registration failed. User already exists.";
     }
 }

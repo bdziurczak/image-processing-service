@@ -16,7 +16,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@RequestMapping("web")
+@RequestMapping("/web")
 class WebController {
     private final UserService userService;
     WebController(UserService userService) {
@@ -29,32 +29,32 @@ class WebController {
         try {
             String username = authentication.getName();
             model.addAttribute("username", username);
-            return "web/index";
+            return "/web/index";
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @GetMapping("login")
+    @GetMapping("/login")
     String login() {
         return "web/login";
     }
 
-    @GetMapping("register")
+    @GetMapping("/register")
     String register() {
         return "web/register";
     }
 
-    @PostMapping("register")
+    @PostMapping("/register")
     ModelAndView registerUser(@RequestParam(name = "username") String username,
                               @RequestParam(name = "password") String password,
                               RedirectAttributes redirectAttributes) {
         System.out.println(username + " " + password + " registered successfully!");
 
         if (userService.registerUser(username, password)) {
-            redirectAttributes.addFlashAttribute("message", "Registration successful!");
+            redirectAttributes.addFlashAttribute("message", "registration successful! You can now log in.");
         } else {
-            redirectAttributes.addFlashAttribute("message", "Registration failed. Username may already exist.");
+            redirectAttributes.addFlashAttribute("message", "registration failed. Username may already exist.");
         }
         return new ModelAndView("redirect:/web/login");
     }
