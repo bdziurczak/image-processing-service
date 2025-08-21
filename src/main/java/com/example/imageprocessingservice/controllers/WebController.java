@@ -29,7 +29,7 @@ class WebController {
         try {
             String username = authentication.getName();
             model.addAttribute("username", username);
-            return "/web/index";
+            return "web/index";
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }

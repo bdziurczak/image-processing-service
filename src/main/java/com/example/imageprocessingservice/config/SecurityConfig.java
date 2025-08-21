@@ -61,20 +61,7 @@ class SecurityConfig {
 
     @Bean
     UserDetailsManager users(DataSource dataSource) {
-        UserDetails user = User.builder()
-                .username("user1")
-                .password("{noop}zaqwsx") // {noop} indicates no password encoding
-                .roles("USER")
-                .build();
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password("{noop}zaqwsxe") // {noop} indicates no password encoding
-                .roles("USER", "ADMIN")
-                .build();
-        JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
-        users.createUser(user);
-        users.createUser(admin);
-        return users;
+        return new JdbcUserDetailsManager(dataSource);
     }
 
     @Bean
