@@ -1,5 +1,6 @@
 package com.example.imageprocessingservice.services;
 
+import com.example.imageprocessingservice.models.Account;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,7 +17,9 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public boolean registerUser(String username, String password) {
+    public boolean registerUser(Account account) {
+        String username = account.username();
+        String password = account.password();
         if (userDetailsManager.userExists(username)) {
             return false;
         }

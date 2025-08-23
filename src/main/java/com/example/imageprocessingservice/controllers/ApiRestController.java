@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+
 @RequestMapping("/api")
 class ApiRestController {
     private final UserService userService;
@@ -36,7 +37,7 @@ class ApiRestController {
 
     @PostMapping("/register")
     String register(@RequestBody Account account) {
-        return userService.registerUser(account.username(), account.password())
+        return userService.registerUser(account)
                 ? "API: Registration successful!"
                 : "Registration failed. User already exists.";
     }

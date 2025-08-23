@@ -1,5 +1,6 @@
 package com.example.imageprocessingservice.controllers;
 
+import com.example.imageprocessingservice.models.Account;
 import com.example.imageprocessingservice.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +52,7 @@ class WebController {
                               RedirectAttributes redirectAttributes) {
         System.out.println(username + " " + password + " registered successfully!");
 
-        if (userService.registerUser(username, password)) {
+        if (userService.registerUser(new Account(username, password))) {
             redirectAttributes.addFlashAttribute("message", "registration successful! You can now log in.");
         } else {
             redirectAttributes.addFlashAttribute("message", "registration failed. Username may already exist.");
