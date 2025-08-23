@@ -15,3 +15,6 @@ Run this command inside the project directory to start the service:
 docker compose -f docker-compose.yml up -p imageprocessingservice \
 up -d --build 
 ```
+
+I use BuildKit to speed up building app
+https://docs.docker.com/build/buildkit/
