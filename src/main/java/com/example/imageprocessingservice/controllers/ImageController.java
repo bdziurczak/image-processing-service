@@ -1,5 +1,6 @@
 package com.example.imageprocessingservice.controllers;
 
+import com.example.imageprocessingservice.DTOs.Transformations;
 import com.example.imageprocessingservice.models.Image;
 import com.example.imageprocessingservice.repositories.ImageRepository;
 import org.springframework.http.HttpHeaders;
@@ -44,4 +45,14 @@ class ImageController {
                 )
                 .orElse(ResponseEntity.status(404).body(null));
     }
+
+    @PostMapping("/{id}/transform")
+    public ResponseEntity<String> transformImage(
+            @PathVariable Long id,
+            @RequestBody Transformations transformations) {
+        Integer width = transformations.resize().width();
+        String format = transformations.format();
+        return ResponseEntity.ok("Applied transformations to image " + id + " with format " + format + " and width " + width);
+    }
+
 }
