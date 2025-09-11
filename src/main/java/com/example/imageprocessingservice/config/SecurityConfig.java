@@ -23,8 +23,20 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
+
     @Bean
     @Order(1)
+    public SecurityFilterChain mainFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/**")
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Allow access to login and register pages
+                        .anyRequest().authenticated())
+                .csrf(Customizer.withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     //TODO
     // First just plain HTTP login and registration
     // Later, add OAuth2 and JWT support
@@ -35,27 +47,6 @@ class SecurityConfig {
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable);; // Use HTTP Basic authentication for API; Here I can use JWT later
-        return http.build();
-    }
-
-    @Bean
-    @Order(2)
-    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/web/**")
-                .authorizeHttpRequests(auth -> auth
-                .requestMatchers(toH2Console()).permitAll() // Allow access to H2 console
-                        .requestMatchers("/web/login", "/web/register").permitAll() // Allow access to login and register pages
-                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/web/login") // Custom login page)
-                        .permitAll()
-                )
-                .csrf(Customizer.withDefaults())
-                .logout(logout -> logout
-                        .logoutUrl("/web/logout")
-                        .logoutSuccessUrl("/web/login")
-                        .permitAll()
-                );
         return http.build();
     }
 

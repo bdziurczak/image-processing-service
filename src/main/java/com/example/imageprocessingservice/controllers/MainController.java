@@ -1,18 +1,41 @@
 package com.example.imageprocessingservice.controllers;
 
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import com.example.imageprocessingservice.models.Account;
+import com.example.imageprocessingservice.services.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
-@RequestMapping("/")
+@RestController
+
+@RequestMapping("/api")
 class MainController {
+    private final UserService userService;
+
+    MainController(UserService userService) {
+        this.userService = userService;
+    }
+
     @GetMapping("/")
     String home() {
-        return "redirect:/web/";
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        try {
+            String username = authentication.getName();
+            return "API: Hello " + username + "!";
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping("/login")
+    String login() {
+        return "Login endpoint";
+    }
+
+    @PostMapping("/register")
+    String register(@RequestBody Account account) {
+        return userService.registerUser(account)
+                ? "API: Registration successful!"
+                : "Registration failed. User already exists.";
     }
 }
