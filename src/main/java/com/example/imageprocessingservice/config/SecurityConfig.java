@@ -25,7 +25,7 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 class SecurityConfig {
 
     @Bean
-    @Order(1)
+    @Order(2)
     public SecurityFilterChain mainFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/**")
                 .authorizeHttpRequests(auth -> auth
@@ -36,17 +36,17 @@ class SecurityConfig {
     }
 
     @Bean
-    @Order(2)
+    @Order(1)
     //TODO
     // First just plain HTTP login and registration
     // Later, add OAuth2 and JWT support
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/api/**")
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/api/login", "/api/register").permitAll()
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
-                .csrf(AbstractHttpConfigurer::disable);; // Use HTTP Basic authentication for API; Here I can use JWT later
+                .httpBasic(Customizer.withDefaults()); // Use HTTP Basic authentication for API; Here I can use JWT later
         return http.build();
     }
 
