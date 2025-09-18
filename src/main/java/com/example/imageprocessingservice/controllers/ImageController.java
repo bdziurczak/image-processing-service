@@ -80,7 +80,9 @@ class ImageController {
 
     @Operation(summary = "Create a transformed copy of an image")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Copy created successfully"),
+            @ApiResponse(responseCode = "201", description = "Copy created successfully",
+                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string", example = "123"))
+            ),
             @ApiResponse(responseCode = "404", description = "Original image not found")
     })
     @PostMapping("/{id}/copies")
