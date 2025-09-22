@@ -3,6 +3,7 @@ package com.example.imageprocessingservice.controllers;
 import com.example.imageprocessingservice.DTOs.Transformations;
 import com.example.imageprocessingservice.models.Image;
 import com.example.imageprocessingservice.repositories.ImageRepository;
+import com.example.imageprocessingservice.utils.TransformImage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,8 +15,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/images")
@@ -65,28 +74,7 @@ class ImageController {
             @ApiResponse(responseCode = "404", description = "Image not found")
     })
     @PatchMapping("/{id}")
-    public ResponseEntity<String> transformImage(
-            @PathVariable Long id,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Transformations to apply",
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = Transformations.class))
-            )
-            @RequestBody Transformations transformations) {
-        Integer width = transformations.resize().width();
-        String format = transformations.format();
-        return ResponseEntity.ok("Applied transformations to image " + id + " with format " + format + " and width " + width);
-    }
-
-    @Operation(summary = "Create a transformed copy of an image")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Copy created successfully",
-                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string", example = "123"))
-            ),
-            @ApiResponse(responseCode = "404", description = "Original image not found")
-    })
-    @PostMapping("/{id}/copies")
-    public ResponseEntity<Long> copyAndTransformImage(
+    public ResponseEntity<byte[]>  transformImage(
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Transformations to apply",
@@ -94,22 +82,54 @@ class ImageController {
                     content = @Content(schema = @Schema(implementation = Transformations.class))
             )
             @RequestBody Transformations transformations) throws IOException {
-        return imgRepository.findById(id).map(original -> {
-            Image newImage = new Image();
-            newImage.setName("copy-of-" + original.getName());
-            newImage.setContentType(transformations.format() != null
-                    ? transformations.format()
-                    : original.getContentType());
+        Image dbImage = imgRepository.findById(id).orElseThrow();
+        BufferedImage original = ImageIO.read(new ByteArrayInputStream(dbImage.getData()));
 
-            // TODO: apply actual transformation logic (resize, convert format, etc.)
-            newImage.setData(original.getData());
+        TransformImage transformer = new TransformImage(transformations, original);
+        BufferedImage transformed = transformer.apply();
 
-            Image saved = imgRepository.save(newImage);
+        String format = transformations.format() != null ? transformations.format() : "png";
 
-            return ResponseEntity
-                    .created(URI.create("/api/images/" + saved.getId()))
-                    .body(saved.getId());
-        }).orElse(ResponseEntity.status(404).build());
+        if (Boolean.TRUE.equals(transformations.saved())) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(transformed, format, baos);
+            dbImage.setData(baos.toByteArray());
+            dbImage.setContentType("image/" + format);
+            imgRepository.save(dbImage);
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(transformed, format, baos);
+        byte[] newBytes = baos.toByteArray();
+
+        String transformedImgName = "";
+        if (Boolean.TRUE.equals(transformations.saved())) {
+            Image transformedImg = new Image();
+            transformedImg .setName(dbImage.getName() + "_transformed");
+            transformedImg .setContentType("image/" + format);
+            transformedImg .setData(newBytes);
+            imgRepository.save(transformedImg);
+            imgRepository.save(dbImage);
+            transformedImgName = transformedImg.getId().toString();
+        }
+
+        return ResponseEntity.ok()
+                .header("Content-Type", "image/" + format)
+                .header("X-Image-Id", transformedImgName)
+                .body(newBytes);
+    }
+    private BufferedImage loadImage(Long id) throws IOException {
+        return ImageIO.read(new File("image-" + id + ".png"));
     }
 
+    private BufferedImage toBufferedImage(java.awt.Image img) {
+        if (img instanceof BufferedImage bi) {
+            return bi;
+        }
+        BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = bimage.createGraphics();
+        g.drawImage(img, 0, 0, null);
+        g.dispose();
+        return bimage;
+    }
 }
