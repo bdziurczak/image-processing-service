@@ -26,8 +26,6 @@ Spin it up from the project directory with:
 docker compose -f docker-compose.yml   -p imageprocessingservice up -d --build
 ```
 
-Yes, that's one long incantation --- but it works.
-
 I've also set up an IntelliJ IDEA run configuration for convenience:\
 ![img.png](readme-images/img.png)
 
@@ -36,8 +34,7 @@ https://docs.docker.com/build/buildkit/
 
 There's also a handy init script at `db/init/init.sql` which sets up the
 database and seeds it with some starting data.\
-*(In the next version, this whole init process will be automated ---
-fewer moving parts, more time for coffee.)*
+*(In the next version, this whole init process will be automated ---)*
 
 ------------------------------------------------------------------------
 
