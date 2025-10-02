@@ -1,5 +1,6 @@
 package com.example.imageprocessingservice.controllers;
 
+import com.example.imageprocessingservice.DTOs.ImageResponse;
 import com.example.imageprocessingservice.DTOs.Transformations;
 import com.example.imageprocessingservice.models.Image;
 import com.example.imageprocessingservice.repositories.ImageRepository;
@@ -40,7 +41,7 @@ class ImageController {
             description = "Uploads an image file and stores it in the database. Returns the image ID."
     )
     @PostMapping
-    public ResponseEntity<Long> uploadImage(@RequestParam("file") MultipartFile file)
+    public ResponseEntity<ImageResponse> uploadImage(@RequestParam("file") MultipartFile file)
         throws IOException {
         Image image = new Image();
         image.setName(file.getOriginalFilename());
@@ -48,7 +49,15 @@ class ImageController {
         image.setContentType(file.getContentType());
         Image savedImage = imgRepository.save(image);
         //@TODO: Return URL, Id and ContentType
-        return ResponseEntity.ok(savedImage.getId());
+        String url = "/images/" + savedImage.getId();
+
+        ImageResponse response = new ImageResponse(
+                savedImage.getId(),
+                url,
+                savedImage.getContentType()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Download image by ID")
@@ -58,7 +67,7 @@ class ImageController {
             @ApiResponse(responseCode = "404", description = "Image not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<byte[]> downloadImage(@PathVariable Long id) {
+    public ResponseEntity<byte[]> downloadImage(@PathVariable("id") Long id) {
         return imgRepository.findById(id)
                 .map(image -> ResponseEntity.ok()
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + image.getName() + "\"")
