@@ -1,6 +1,6 @@
 package com.example.imageprocessingservice.controllers;
 
-import com.example.imageprocessingservice.models.Account;
+import com.example.imageprocessingservice.TableModels.Account;
 import com.example.imageprocessingservice.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.core.Authentication;

@@ -1,6 +1,6 @@
 package com.example.imageprocessingservice.services;
 
-import com.example.imageprocessingservice.models.Account;
+import com.example.imageprocessingservice.TableModels.Account;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;

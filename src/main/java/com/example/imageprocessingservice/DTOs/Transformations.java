@@ -6,7 +6,8 @@ public record Transformations(
         Integer rotate,
         String format,
         Filters filters,
-        Boolean saved
+        Boolean saved,
+        Boolean copied
 ) {
     public record Resize(Integer width, Integer height) {}
     public record Crop(Integer width, Integer height, Integer x, Integer y) {}
