@@ -9,9 +9,9 @@ import java.util.List;
 @Entity
 @Table(name = "originals")
 public class ImageOriginal extends ImageBase {
-    @OneToMany(mappedBy = "original", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "imageOriginal", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ImageTransformed> transformedImages =  new ArrayList<>();
 
-    @OneToMany(mappedBy = "original", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "imageOriginal", cascade = CascadeType.ALL)
     private List<ImageCopied> copiedImages = new ArrayList<>();
 }

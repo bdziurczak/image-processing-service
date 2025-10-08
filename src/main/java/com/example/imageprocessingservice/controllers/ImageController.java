@@ -2,10 +2,16 @@ package com.example.imageprocessingservice.controllers;
 
 import com.example.imageprocessingservice.DTOs.ImageResponse;
 import com.example.imageprocessingservice.DTOs.Transformations;
+import com.example.imageprocessingservice.TableModels.ImageCopied;
 import com.example.imageprocessingservice.TableModels.ImageOriginal;
-import com.example.imageprocessingservice.repositories.ImageRepository;
+import com.example.imageprocessingservice.TableModels.ImageTransformed;
+import com.example.imageprocessingservice.TableModels.Superclasses.ImageBase;
+import com.example.imageprocessingservice.repositories.ImageCopiedRepository;
+import com.example.imageprocessingservice.repositories.ImageOriginalRepository;
+import com.example.imageprocessingservice.repositories.ImageTransformedRepository;
 import com.example.imageprocessingservice.utils.TransformImage;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,14 +27,21 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/images")
 class ImageController {
-    private final ImageRepository imgRepository;
+    private final ImageOriginalRepository imageOriginalRepository;
+    private final ImageTransformedRepository imageTransformedRepository;
+    private final ImageCopiedRepository imageCopiedRepository;
 
-    ImageController(ImageRepository imgRepository) {
-        this.imgRepository = imgRepository;
+    ImageController(ImageOriginalRepository imageOriginalRepository, ImageTransformedRepository imageTransformedRepository, ImageCopiedRepository imageCopiedRepository) {
+        this.imageOriginalRepository = imageOriginalRepository;
+        this.imageTransformedRepository = imageTransformedRepository;
+        this.imageCopiedRepository = imageCopiedRepository;
     }
 
     @Operation(
@@ -42,9 +55,9 @@ class ImageController {
         image.setName(file.getOriginalFilename());
         image.setData(file.getBytes());
         image.setContentType(file.getContentType());
-        ImageOriginal savedImage = imgRepository.save(image);
+        ImageOriginal savedImage = imageOriginalRepository.save(image);
         //@TODO: Return URL, Id and ContentType
-        String url = "/images/" + savedImage.getId();
+        String url = "/originals/" + savedImage.getId();
 
         ImageResponse response = new ImageResponse(
                 savedImage.getId(),
@@ -55,21 +68,34 @@ class ImageController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Download image by ID")
-    @ApiResponses(value = {
+    @Operation(
+            summary = "Download an image by type and ID",
+            description = "Retrieves an image from originals, transformed, or copied tables."
+    )
+    @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Image retrieved successfully",
-                    content = @Content(mediaType = "image/*",  schema = @Schema(type = "string", format = "binary"))),
+                    content = @Content(mediaType = "image/*")),
             @ApiResponse(responseCode = "404", description = "Image not found")
     })
-    @GetMapping("/{id}")
-    public ResponseEntity<byte[]> downloadImage(@PathVariable Long id) {
-        return imgRepository.findById(id)
-                .map(image -> ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + image.getName() + "\"")
-                        .contentType(MediaType.parseMediaType(image.getContentType()))
-                        .body(image.getData())
-                )
-                .orElse(ResponseEntity.status(404).body(null));
+    @GetMapping("/{type}/{id}")
+    public ResponseEntity<byte[]> downloadImage(
+            @Parameter(description = "Table type: originals, transformed, or copied", required = true)
+            @PathVariable String type,
+            @Parameter(description = "Image ID", required = true)
+            @PathVariable Long id) {
+        Optional<? extends ImageBase> image = switch(type.toLowerCase()) {
+            case "originals" -> imageOriginalRepository.findById(id);
+            case "transformed" -> imageTransformedRepository.findById(id);
+            case "copied" -> imageCopiedRepository.findById(id);
+            default -> throw new IllegalStateException("Unexpected value: " + type.toLowerCase());
+        };
+        return image.map(img -> ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename = \"" + img.getName() + "\"")
+                .contentType(MediaType.parseMediaType(img.getContentType()))
+                .body(img.getData()))
+                .orElseGet(() -> ResponseEntity.status(404).body(null));
+
     }
 
     @Operation(summary = "Apply transformations to an image")
@@ -77,8 +103,8 @@ class ImageController {
             @ApiResponse(responseCode = "200", description = "Transformations applied successfully"),
             @ApiResponse(responseCode = "404", description = "Image not found")
     })
-    @PatchMapping("/{id}")
-    public ResponseEntity<byte[]>  transformImage(
+    @PatchMapping("originals/{id}")
+    public ResponseEntity<Map<String, Object>>  transformImage(
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Transformations to apply",
@@ -86,8 +112,12 @@ class ImageController {
                     content = @Content(schema = @Schema(implementation = Transformations.class))
             )
             @RequestBody Transformations transformations) throws IOException {
-        ImageOriginal dbImage = imgRepository.findById(id).orElseThrow();
-        BufferedImage original = ImageIO.read(new ByteArrayInputStream(dbImage.getData()));
+        ImageOriginal imageOriginal = imageOriginalRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Original image not found"));
+        BufferedImage original = ImageIO.read(new ByteArrayInputStream(imageOriginal.getData()));
+        if (original == null) {
+            throw new IOException("Could not decode original image bytes.");
+        }
 
         TransformImage transformer = new TransformImage(transformations, original);
         BufferedImage transformed = transformer.apply();
@@ -98,27 +128,44 @@ class ImageController {
         ImageIO.write(transformed, format, baos);
         byte[] newBytes = baos.toByteArray();
 
+        Long transformedImgId = null;
+        Long copiedImgId = null;
+
         if (Boolean.TRUE.equals(transformations.saved())) {
-            dbImage.setData(newBytes);
-            dbImage.setContentType("image/" + format);
-            imgRepository.save(dbImage);
+            try {
+                ImageTransformed transformedImg = new ImageTransformed();
+                transformedImg.setImageOriginal(imageOriginal);
+                transformedImg.setName(imageOriginal.getName() + "_transformed");
+                transformedImg.setData(newBytes);
+                transformedImg.setContentType("image/" + format);
+                imageTransformedRepository.save(transformedImg);
+                transformedImgId = transformedImg.getId();
+            }
+            catch (Exception e) {
+                throw new IllegalArgumentException("Failed to save transformed image", e);
+            }
         }
 
-        String transformedImgName = "";
         if (Boolean.TRUE.equals(transformations.copied())) {
-            ImageOriginal transformedImg = new ImageOriginal();
-            transformedImg.setName(dbImage.getName() + "_transformed");
-            transformedImg.setContentType("image/" + format);
-            transformedImg.setData(newBytes);
-            imgRepository.save(transformedImg);
-            imgRepository.save(dbImage);
-            transformedImgName = transformedImg.getId().toString();
+            try {
+                ImageCopied copiedImg = new ImageCopied();
+                copiedImg.setImageOriginal(imageOriginal);
+                copiedImg.setName(imageOriginal.getName() + "_copied");
+                copiedImg.setContentType("image/" + format);
+                copiedImg.setData(newBytes);
+                imageCopiedRepository.save(copiedImg);
+                copiedImgId = copiedImg.getId();
+            }
+            catch (Exception e) {
+                throw new IllegalArgumentException("Failed to save copied image", e);
+            }
         }
+        Map<String, Object> response = new HashMap<>();
+        response.put("transformed image id", transformedImgId);
+        response.put("copy image id", copiedImgId);
+        response.put("contentType", "image/" + format);
+        return ResponseEntity.ok(response);
 
-        return ResponseEntity.ok()
-                .header("Content-Type", "image/" + format)
-                .header("X-Image-Id", transformedImgName)
-                .body(newBytes);
     }
 
 }

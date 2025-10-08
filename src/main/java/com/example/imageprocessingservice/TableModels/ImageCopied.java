@@ -10,4 +10,11 @@ public class ImageCopied extends ImageBase {
     @JoinColumn(name = "original_id", nullable = false)
     private ImageOriginal imageOriginal;
 
+    public ImageOriginal getImageOriginal() {
+        return imageOriginal;
+    }
+
+    public void setImageOriginal(ImageOriginal imageOriginal) {
+        this.imageOriginal = imageOriginal;
+    }
 }
